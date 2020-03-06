@@ -15,9 +15,11 @@ $opt = [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES   => false,
 ];
+
 $pdo = new PDO($dsn, $user, $pass, $opt);
 
-$sql = 'INSERT INTO jobs (message, user_id, executed, operation_type) VALUES (:message, :user_id, :executed, :operation_type)';
+$sql =
+    'INSERT INTO jobs (message, user_id, executed, operation_type) VALUES (:message, :user_id, :executed, :operation_type)';
 $stmt = $pdo->prepare($sql);
 
 $connection = new AMQPStreamConnection('localhost', 5672, 'guest', 'guest');
@@ -27,8 +29,7 @@ $channel->queue_declare('jobs', false, false, false, false);
 
 echo " [*] Waiting for a job. To exit press CTRL+C\n";
 
-
-$callback = function ($msg) use ($stmt){
+$callback = function ($msg) use ($stmt) {
     $msg = json_decode($msg->body, $assocForm=true);
 
     $stmt->execute([

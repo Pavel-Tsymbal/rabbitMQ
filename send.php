@@ -16,7 +16,11 @@ $jobData = [
     'date' => date('d-m-Y H:m:s')
 ];
 
-$msg = new AMQPMessage(json_encode($jobData, JSON_UNESCAPED_SLASHES), ['delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT]);
+$msg = new AMQPMessage(
+    json_encode($jobData, JSON_UNESCAPED_SLASHES),
+    ['delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT]
+);
+
 $channel->basic_publish($msg, '', 'jobs');
 
 echo " [x] Sent 'job' \n";
