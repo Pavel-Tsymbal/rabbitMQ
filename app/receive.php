@@ -1,11 +1,11 @@
 <?php
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 
-$host = '127.0.0.1';
-$db   = 'rabbit';
+$host = 'mariadb';
+$db   = 'dbname';
 $user = 'root';
-$pass = '';
+$pass = 'mysql';
 $charset = 'utf8';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
@@ -22,27 +22,31 @@ $sql =
     'INSERT INTO jobs (message, user_id, executed, operation_type) VALUES (:message, :user_id, :executed, :operation_type)';
 $stmt = $pdo->prepare($sql);
 
-$connection = new AMQPStreamConnection('localhost', 5672, 'guest', 'guest');
+$connection = new AMQPStreamConnection('rabbitmq', 5672, 'guest', 'guest');
 $channel = $connection->channel();
 
 $channel->queue_declare('jobs', false, false, false, false);
 
 echo " [*] Waiting for a job. To exit press CTRL+C\n";
 
-$callback = function ($msg) use ($stmt) {
-    $msg = json_decode($msg->body, $assocForm=true);
+$messages = [];
+$callback = function ($msg) use ($stmt, &$messages) {
+    $messages[] = json_decode($msg->body, $assocForm=true);
+    $counter = 5;
 
-    $stmt->execute([
-        'message' => $msg['message'],
-        'user_id' => $msg['user_id'],
-        'operation_type' => $msg['operation_type'],
-        'executed' => $msg['date']
-    ]);
+    if (count($messages) === $counter) {
+        foreach ($messages as $msg) {
+            $stmt->execute([
+                'message' => $msg['message'],
+                'user_id' => $msg['user_id'],
+                'operation_type' => $msg['operation_type'],
+                'executed' => $msg['date']
+            ]);
+        }
 
-    echo ' [x] Message ', $msg['message'], "\n";
-    echo ' [x] User id ', $msg['user_id'], "\n";
-    echo ' [x] Operation type ', $msg['operation_type'], "\n";
-    echo ' [x] Date ', $msg['date'], "\n";
+        echo 'Processed new messages: ', $counter, "\n";
+        $messages = [];
+    }
 };
 
 $channel->basic_consume('jobs', '', false, false, false, false, $callback);
