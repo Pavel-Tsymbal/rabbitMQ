@@ -19,7 +19,7 @@ $opt = [
 $pdo = new PDO($dsn, $user, $pass, $opt);
 
 $sql =
-    'INSERT INTO jobs (message, user_id, executed, operation_type) VALUES (:message, :user_id, :executed, :operation_type)';
+    'INSERT INTO jobs (message, email, executed, operation_type) VALUES (:message, :email, :executed, :operation_type)';
 $stmt = $pdo->prepare($sql);
 
 $connection = new AMQPStreamConnection('rabbitmq', 5672, 'guest', 'guest');
@@ -31,14 +31,14 @@ echo " [*] Waiting for a job. To exit press CTRL+C\n";
 
 $messages = [];
 $callback = function ($msg) use ($stmt, &$messages) {
-    $messages[] = json_decode($msg->body, $assocForm=true);
+    $messages[] = json_decode($msg->body, true);
     $counter = 5;
 
     if (count($messages) === $counter) {
         foreach ($messages as $msg) {
             $stmt->execute([
                 'message' => $msg['message'],
-                'user_id' => $msg['user_id'],
+                'email' => $msg['email'],
                 'operation_type' => $msg['operation_type'],
                 'executed' => $msg['date']
             ]);

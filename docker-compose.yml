@@ -7,31 +7,64 @@ services:
         restart: always
         ports:
             - "${HOST_NGINX_PORT}:80"
-#            - "443:443"
+        #            - "443:443"
         volumes:
             - ./hosts:/etc/nginx/conf.d
             - ./:/var/www
             - ./logs:/var/log/nginx
         links:
-            - php
+            - php_sender
+        depends_on:
+            - php_sender
+        networks:
+            - internal_network_1
+
+    php_sender:
+        container_name: php_sender
+        build: ./images/php
+
+        restart: always
+        links:
+            - redis
+            - rabbitmq
+        depends_on:
+            - redis
+            - rabbitmq
+        volumes:
+            - ./:/var/www
         networks:
           - internal_network_1
 
-    php:
-        container_name: custom_php
+    php_worker:
+        container_name: php_worker
         build: ./images/php
 
         restart: always
         links:
             - mariadb
             - rabbitmq
+            - redis
         depends_on:
             - mariadb
             - rabbitmq
+            - redis
         volumes:
-            - ./:/var/www
+            - ./app-worker:/var/www/app
+            - ./vendor:/var/www/vendor
         networks:
-          - internal_network_1
+            - internal_network_1
+
+    redis:
+        container_name: redis
+        image: redis:alpine
+        environment:
+            - ALLOW_EMPTY_PASSWORD=yes
+        ports:
+            - "${HOST_REDIS_PORT}:6379"
+        networks:
+            - internal_network_1
+        volumes:
+            - ./redis:/data
 
     mariadb:
         container_name: custom_mariadb
