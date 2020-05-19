@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8c835e2443ea7fd2c81b8252f56e2005",
+    "content-hash": "4936eaedc9e627cd72b67ddd6b67f437",
     "packages": [
         {
             "name": "php-amqplib/php-amqplib",
@@ -182,6 +182,9 @@
     "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
-    "platform": [],
-    "platform-dev": []
+    "platform": {
+        "ext-pdo": "*"
+    },
+    "platform-dev": [],
+    "plugin-api-version": "1.1.0"
 }

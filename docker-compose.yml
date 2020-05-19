@@ -1,0 +1,120 @@
+version: '2'
+
+services:
+    nginx:
+        container_name: custom_nginx
+        image: nginx:latest
+        restart: always
+        ports:
+            - "${HOST_NGINX_PORT}:80"
+        #            - "443:443"
+        volumes:
+            - ./hosts:/etc/nginx/conf.d
+            - ./:/var/www
+            - ./logs:/var/log/nginx
+        links:
+            - php_sender
+        depends_on:
+            - php_sender
+        networks:
+            - internal_network_1
+
+    php_sender:
+        container_name: php_sender
+        build: ./images/php
+
+        restart: always
+        links:
+            - redis
+            - rabbitmq
+        depends_on:
+            - redis
+            - rabbitmq
+        volumes:
+            - ./:/var/www
+        networks:
+          - internal_network_1
+
+    php_worker:
+        container_name: php_worker
+        build: ./images/php
+
+        restart: always
+        links:
+            - mariadb
+            - rabbitmq
+            - redis
+        depends_on:
+            - mariadb
+            - rabbitmq
+            - redis
+        volumes:
+            - ./app-worker:/var/www/app
+            - ./vendor:/var/www/vendor
+        networks:
+            - internal_network_1
+
+    redis:
+        container_name: redis
+        image: redis:alpine
+        environment:
+            - ALLOW_EMPTY_PASSWORD=yes
+        ports:
+            - "${HOST_REDIS_PORT}:6379"
+        networks:
+            - internal_network_1
+        volumes:
+            - ./redis:/data
+
+    mariadb:
+        container_name: custom_mariadb
+        image: mariadb:10.4
+        restart: always
+        ports:
+            - "${HOST_MYSQL_PORT}:3306"
+        volumes:
+            - ./mariadb:/var/lib/mysql
+        environment:
+            MYSQL_DATABASE: "${MARIADB_DATABASE}"
+            MYSQL_USER: "${MARIADB_USER}"
+            MYSQL_PASSWORD: "${MARIADB_PASSWORD}"
+            MYSQL_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+        networks:
+          - internal_network_1
+
+    rabbitmq:
+        image: rabbitmq:3-management
+        container_name: rabbitmq
+        volumes:
+            - ./.docker/rabbitmq/etc/:/etc/rabbitmq/
+            - ./.docker/rabbitmq/data/:/var/lib/rabbitmq/
+            - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
+        environment:
+            RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+            RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+        ports:
+            - 5672:5672
+            - 15672:15672
+        networks:
+            - internal_network_1
+
+    phpmyadmin:
+        container_name: custom_phpmyadmin
+        image: phpmyadmin/phpmyadmin
+        restart: always
+        ports:
+            - "${HOST_PHPMYADMIN_PORT}:80"
+        links:
+            - mariadb:db
+        depends_on:
+            - mariadb
+        environment:
+            PMA_HOST: mariadb
+            MYSQL_USER_NAME: root
+            MYSQL_ROOT_PASSWORD: "mysql"
+        networks:
+            - internal_network_1
+
+networks:
+  internal_network_1:
+    driver: bridge
